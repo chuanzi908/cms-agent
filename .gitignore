@@ -1,0 +1,42 @@
+# Maven 构建产物
+target/
+*.jar
+*.war
+*.ear
+
+# IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# 日志
+*.log
+logs/
+
+# 构建/运行日志（txt后缀）
+build-log.txt
+install-log.txt
+package-log.txt
+test-log.txt
+app-run.log
+app-run-err.log
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地临时
+*.tmp
+*.bak

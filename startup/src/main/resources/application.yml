@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: cms
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 请按本机实际修改用户名/密码
+    url: jdbc:mysql://127.0.0.1:3306/cms?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: "123456"
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    # SQL日志打印（M2验收：检查分页只有2条SQL，无N+1）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+      # 逻辑删除全局配置
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:mapper/*.xml
+
+logging:
+  level:
+    com.ylf.cms: debug
