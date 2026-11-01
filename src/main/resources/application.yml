@@ -1,0 +1,48 @@
+server:
+  # 8090 而不是 8080：本机系统级 tomcat9 服务占着 8080，直接起会 BindException
+  port: 8090
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+
+spring:
+  application:
+    name: cms-agent
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 账号密码不写进仓库，由环境变量提供（见 README「本地启动」）
+    url: jdbc:mysql://${CMS_DB_HOST:localhost}:${CMS_DB_PORT:3306}/${CMS_DB_NAME:cms_db}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${CMS_DB_USER:}
+    password: ${CMS_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+  thymeleaf:
+    cache: false
+    encoding: UTF-8
+  jackson:
+    # LocalDateTime 由 JSR-310 模块按 ISO-8601 输出，spring.jackson.date-format 对 java.time 不生效
+    default-property-inclusion: non_null
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  # 实体类不在同一包下，XML 里一律写全限定名，因此不需要 type-aliases-package
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+logging:
+  level:
+    root: info
+    com.ylf.cms: info
