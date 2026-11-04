@@ -6,7 +6,7 @@
 
 ## 现在到哪一步了
 
-第 2 天，公共层的统一返回与全局异常处理已就位，`mvn -o package` 会跑两条异常泄露检查。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
+第 3 天，公共层的分页校验、traceId 与工具类已就位，`mvn -o package` 会跑 14 条检查，其中一条是 `pageSize=99999` 必须被拒。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
 
 ## 本地启动
 

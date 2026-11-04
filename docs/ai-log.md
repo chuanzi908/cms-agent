@@ -25,3 +25,21 @@
 > 响应体泄露了「select」：{"code":50000,"message":"java.lang.IllegalStateException: nested exception is java.sql.SQLException: select * from sys_user where password = 'admin'", ...}
 
 验证完已改回。`mvn -o package` 绿，`Tests run: 2, Failures: 0`。
+
+## D3 · 2026-11-04 · 公共层·校验与工具
+
+**做了什么**：`PageQuery` / `PageResult`、`TraceIdFilter`、`@GuideCard`、`IpUtil` / `MaskUtil` / `SortWhitelist` 原样搬入，新增两个测试类（`PageQueryValidationTest` 3 条、`CommonLayerTest` 9 条）。
+
+**为什么这一块排第三**：分页参数和异常处理是一对——D2 只保证"出错时怎么说"，D3 才保证"什么时候算错"。`pageSize` 不设上限不会报错，只会让一次列表请求把整张表读进内存，这类问题在演示时看不出来、在数据量上来时才发现。`SortWhitelist` 同理：`ORDER BY` 后面不能放占位符，唯一可行的防线是白名单，晚一天加就多一天裸奔。
+
+**判据**：`GET /api/articles?pageSize=99999` 返回 400，响应体带 `code:40000` 与「每页最多 200 条」；同时断言默认值 1/10 和合法值 2/20 仍返回 200，避免"全拒"也能通过的假绿。
+
+**这条判据真的能红**：把 `PageQuery` 上的 `@Max(value = 200)` 临时删掉，`oversizedPageSizeIsRejected` 立即失败：
+
+> expected: <400> but was: <200>
+
+验证完已改回，`mvn -o package` 绿，`Tests run: 14, Failures: 0`（D2 的 2 条 + 今天的 12 条）。
+
+**卡点**：GitHub 的 22 端口直连超时（`ssh -T git@github.com` 20 秒无响应），本机代理只开了 HTTP/SOCKS，SSH 走不出去。改为 HTTPS 远程经 `127.0.0.1:7897` 推送；仓库的 `origin` 仍保留 SSH 地址，换机器时再按网络情况切换。
+
+**日期**：D3 实际完成于 11-04，比计划表晚一天。按规则 4 顺延，不压缩后续内容。
