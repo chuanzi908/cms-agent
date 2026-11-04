@@ -20,3 +20,9 @@
 **为什么**：M2 接口要校验"当前登录人是不是作者本人""有没有某权限"，而 M1 还没实现，先用公共层把登录态和跨模块契约定下来，M1/M3 同学照注解实现即可。
 **卡点**：注解的 `@Target` 写漏了 `ElementType.METHOD`，切面扫描不到方法上的注解，权限校验一直不生效；补上 METHOD 后正常。
 
+## D4 · 2026-11-04 · 数据层：建表脚本与 MyBatis-Plus 配置
+
+**做了什么**：写 `sql/schema.sql`（sys_user、sys_role、sys_permission、sys_user_role、cms_category、cms_article 等 8 张表 + 种子数据），提供 `db/init.bat`/`init.sh` 一键初始化；在 config 模块配置 MyBatis-Plus 分页插件、乐观锁插件、字段自动填充（create_time/update_time/deleted）。
+**为什么**：伪 M1 要连真实 MySQL 读用户表，M2 的文章表、分类表也需要真实表结构；乐观锁和逻辑删除是验收点，必须在插件层配好。
+**卡点**：MyBatis-Plus 乐观锁要实体字段标 `@Version` 且插件里 new OptimisticLockerInnerInterceptor，否则 update 不会带 version 条件；漏配插件时并发编辑两个请求都成功，验收用例 2 不通过。
+
