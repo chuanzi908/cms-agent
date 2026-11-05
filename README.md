@@ -6,7 +6,7 @@
 
 ## 现在到哪一步了
 
-第 3 天，公共层的分页校验、traceId 与工具类已就位，`mvn -o package` 会跑 14 条检查，其中一条是 `pageSize=99999` 必须被拒。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
+第 4 天，数据层已就位：8 张表、初始化数据、MyBatis-Plus 插件与审计填充。`mvn -o package` 跑 18 条检查；建表可用 `bash scripts/verify-db.sh` 在临时 MariaDB 实例里验证，不会碰本机已有的库。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
 
 ## 本地启动
 

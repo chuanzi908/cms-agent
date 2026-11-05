@@ -43,3 +43,22 @@
 **卡点**：GitHub 的 22 端口直连超时（`ssh -T git@github.com` 20 秒无响应），本机代理只开了 HTTP/SOCKS，SSH 走不出去。改为 HTTPS 远程经 `127.0.0.1:7897` 推送；仓库的 `origin` 仍保留 SSH 地址，换机器时再按网络情况切换。
 
 **日期**：D3 实际完成于 11-04，比计划表晚一天。按规则 4 顺延，不压缩后续内容。
+
+## D4 · 2026-11-05 · 数据层
+
+**做了什么**：`schema.sql`（六张主表 + `sys_log` + 两张关联表）、`data.sql`（4 角色 / 15 权限点 / 5 用户 / 10 分类 / 20 文章 / 7 条日志）、`MybatisPlusConfig`、`AuditMetaObjectHandler`，另加 `DataLayerTest` 4 条与 `scripts/verify-db.sh`。
+
+**为什么这一块排第四**：后面每一块都要落表，表结构定晚了返工面最大。三个设计点是刻意的：`sys_permission` 运行期只读（D11 的站点地图校验依赖"权限码集合稳定"）；文章用 `version` 做乐观锁而不是行锁；所有业务表都有 `create_time`/`update_time`，且由 `MetaObjectHandler` 统一下发——业务代码手写时间戳，迟早有一处漏。
+
+**审计填充的切法**：源项目的 `AuditMetaObjectHandler` 还填 `create_by`/`update_by`，这依赖 D5 才进来的 `UserContext`。今天先只填时间，D5 把登录态接上后补两行；否则数据层单独编译不过。
+
+**判据一（建表）**：`scripts/verify-db.sh` 起一个**用户级临时 MariaDB 实例**（随机端口 + socket，跑完即删），在空库里跑 `schema.sql` 与 `data.sql`，断言 8 张表、6 个外键、各表行数与脚本一致。不碰本机已有的 `cms_db`——`cmsapp` 只有该库权限，`root` 也不接受 socket 登录，所以不能建临时库，只能另起实例。
+
+**判据二（审计填充）**：测试实体标 `@TableField(fill = INSERT/INSERT_UPDATE)`，调 handler 后断言两个时间戳都被填上、更新时 `createTime` 不被覆盖、`id` 不被误改。
+
+**两条判据都真的能红**：
+- 把 `insertFill` 里两行 `strictInsertFill` 删掉 → `expected: not <null>`（createTime 没有自动填充）。
+- 往 `schema.sql` 末尾追加一句 `THIS IS NOT SQL;` → 脚本退出码 1，报 `ERROR 1064 ... near 'THIS IS NOT SQL'`。
+验证完均已还原，`mvn -o package` 绿，`Tests run: 18, Failures: 0`；`scripts/verify-db.sh` 输出 `OK`。
+
+**日期**：D4 实际完成于 11-05，计划表写 11-04，同样顺延一天。
