@@ -26,3 +26,9 @@
 **为什么**：伪 M1 要连真实 MySQL 读用户表，M2 的文章表、分类表也需要真实表结构；乐观锁和逻辑删除是验收点，必须在插件层配好。
 **卡点**：MyBatis-Plus 乐观锁要实体字段标 `@Version` 且插件里 new OptimisticLockerInnerInterceptor，否则 update 不会带 version 条件；漏配插件时并发编辑两个请求都成功，验收用例 2 不通过。
 
+## D5 · 2026-11-05 · 伪 M1 登录：连接真实 MySQL 读取用户
+
+**做了什么**：实现 security 模块的 `SysUser` 实体、`SysUserMapper`（BaseMapper）、`AuthController`（POST /api/login 返回 token=userId）、`LoginInterceptor`（从 Authorization 头解析 token 写入 UserContext）、`UserService/UserServiceImpl`（loadLoginUser 查库）；在 startup 注册拦截器，放行 /api/login。
+**为什么**：小组 M1 还没交付，但 M2 所有接口都要登录态；按分工说明的契约做一个能连接真实 MySQL 读取 sys_user 的伪 M1，先让 M2 跑起来。
+**卡点**：登录接口用 curl 测试时 `-d "username=admin&password=admin123"` 中文参数乱码，请求体编码不对；解决方法是 HTTP 测试文件里明确 Content-Type 与 UTF-8，密码用英文/数字。
+
