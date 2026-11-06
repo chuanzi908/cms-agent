@@ -32,3 +32,9 @@
 **为什么**：小组 M1 还没交付，但 M2 所有接口都要登录态；按分工说明的契约做一个能连接真实 MySQL 读取 sys_user 的伪 M1，先让 M2 跑起来。
 **卡点**：登录接口用 curl 测试时 `-d "username=admin&password=admin123"` 中文参数乱码，请求体编码不对；解决方法是 HTTP 测试文件里明确 Content-Type 与 UTF-8，密码用英文/数字。
 
+## D6 · 2026-11-06 · 伪 M1 权限：角色权限真实查库与切面校验
+
+**做了什么**：升级 `SysUserMapper`，新增 `findRoleCodes`、`findPermissionCodes` 两张注解 @Select 查询（联表 sys_user_role/sys_role/sys_permission）；实现 `PermissionAspect`，在 `@RequirePermission` 注解的方法上切面校验当前用户权限码，不通过返回 403 风格错误。
+**为什么**：验收要"权限不足时拒绝"，伪 M1 的权限不能写死，必须真实查库；切面校验让 M2 的 controller 只标注解、不写校验逻辑。
+**卡点**：权限表种子数据里 zhangsan 的账号 deleted 被误置为 1，导致登录后查不到角色权限，联表结果为空；把 zhangsan 恢复为 deleted=0 后权限查询正常。
+
