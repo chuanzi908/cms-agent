@@ -38,3 +38,9 @@
 **为什么**：验收要"权限不足时拒绝"，伪 M1 的权限不能写死，必须真实查库；切面校验让 M2 的 controller 只标注解、不写校验逻辑。
 **卡点**：权限表种子数据里 zhangsan 的账号 deleted 被误置为 1，导致登录后查不到角色权限，联表结果为空；把 zhangsan 恢复为 deleted=0 后权限查询正常。
 
+## D7 · 2026-11-07 · 伪 M1 用户管理：删除守卫接 M2 计数
+
+**做了什么**：实现 `UserAdminController`（DELETE /api/users/{id}、列表查询等用户管理接口）；`UserService` 新增 `countAll`（统计用户数）与删除守卫逻辑——删除用户前调用 M2 的 `ArticleAuthorCounter.countArticlesByAuthor`，稿件数大于 0 返回 40903。
+**为什么**：分工说明要求"账号下有稿件不允许删除"，这是 M2 与 M1 的协作点；M1 没实现，就在伪 M1 里通过公共层接口接上 M2 的计数能力。
+**卡点**：`countArticlesByAuthor` 的返回类型一开始写成了 `int`，跨模块接口约束不统一；统一改成 `long` 后编译通过。
+

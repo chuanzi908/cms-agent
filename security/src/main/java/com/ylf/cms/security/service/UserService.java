@@ -9,6 +9,11 @@ import com.ylf.cms.common.LoginUser;
 public interface UserService {
 
     /**
+     * 系统账号总数（M2工作台统计使用）
+     */
+    long countAll();
+
+    /**
      * 根据用户ID加载登录态（M1登录拦截器内部使用）
      */
     LoginUser loadLoginUser(Long userId);

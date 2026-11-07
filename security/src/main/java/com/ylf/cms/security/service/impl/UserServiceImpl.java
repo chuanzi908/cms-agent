@@ -1,5 +1,6 @@
 package com.ylf.cms.security.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ylf.cms.common.LoginUser;
 import com.ylf.cms.security.entity.SysUser;
 import com.ylf.cms.security.mapper.SysUserMapper;
@@ -7,7 +8,7 @@ import com.ylf.cms.security.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -20,6 +21,11 @@ public class UserServiceImpl implements UserService {
     private final SysUserMapper sysUserMapper;
 
     @Override
+    public long countAll() {
+        return sysUserMapper.selectCount(Wrappers.<SysUser>lambdaQuery().eq(SysUser::getDeleted, 0));
+    }
+
+    @Override
     public LoginUser loadLoginUser(Long userId) {
         if (userId == null) {
             return null;
@@ -28,12 +34,15 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             return null;
         }
-        // 临时实现：以角色码充当权限码（D6 发现失真后改为真实联查 sys_role/sys_permission）
-        List<String> roles = new ArrayList<>();
-        roles.add("user");
-        if (userId == 1L) {
-            roles.add("ADMIN");
+        // 真实查询角色与权限编码（伪M1也走同一张库）
+        List<String> roles = sysUserMapper.findRoleCodes(userId);
+        List<String> permissions = sysUserMapper.findPermissionCodes(userId);
+        if (roles == null) {
+            roles = Collections.emptyList();
         }
-        return new LoginUser(user.getId(), user.getUsername(), user.getNickname(), roles, new ArrayList<>(roles));
+        if (permissions == null) {
+            permissions = Collections.emptyList();
+        }
+        return new LoginUser(user.getId(), user.getUsername(), user.getNickname(), roles, permissions);
     }
 }
