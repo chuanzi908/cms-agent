@@ -44,3 +44,9 @@
 **为什么**：分工说明要求"账号下有稿件不允许删除"，这是 M2 与 M1 的协作点；M1 没实现，就在伪 M1 里通过公共层接口接上 M2 的计数能力。
 **卡点**：`countArticlesByAuthor` 的返回类型一开始写成了 `int`，跨模块接口约束不统一；统一改成 `long` 后编译通过。
 
+## D8 · 2026-11-08 · 伪 M3 分类：分类树与启用校验
+
+**做了什么**：实现 catalog 模块的 `CmsCategory` 实体、`CmsCategoryMapper`、`CategoryService`（descendantIds 展开子分类、requireEnabled 校验启用状态、列表树）、`CategoryFlatVO`。
+**为什么**：M2 的文章必须挂在分类下，且"停用分类不能发文章"是验收点；M3 没交付，用伪 M3 提供分类能力，M2 通过 Service 接口调用（不跨模块 import mapper）。
+**卡点**：递归展开子分类时死循环（父子 id 相同的数据），在递归入口加 visited 集合去重后正常。
+
