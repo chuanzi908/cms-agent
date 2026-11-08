@@ -62,3 +62,32 @@
 验证完均已还原，`mvn -o package` 绿，`Tests run: 18, Failures: 0`；`scripts/verify-db.sh` 输出 `OK`。
 
 **日期**：D4 实际完成于 11-05，计划表写 11-04，同样顺延一天。
+
+## D5 · 2026-11-08 · 安全层·身份
+
+**做了什么**：`LoginUser` / `UserContext`、`LoginInterceptor`、`PasswordConfig`（只引 `spring-security-crypto` 拿 BCrypt）、`WebMvcConfig`、`AuthService` / `AuthController`（登录、注册、退出、`/me`）以及它们依赖的 `SysUser` / `SysRole` 实体与三个 mapper、`SessionKeys` / `RoleCode`。新增 `LoginInterceptorTest` 5 条、`AuthBoundaryTest` 4 条。
+
+**为什么这一块排第五**：身份是后面所有块的前置——D6 的权限码要挂在登录态上，D8 的审计要取 `createBy`，D10 的站点地图要校验卡片上的权限码是否存在。而且身份层一旦定错（比如把整个 `LoginUser` 塞进 Session），后面每改一次权限就得让用户重新登录，演示时很难解释。
+
+**两个刻意的设计点**：
+- Session 里**只存 userId**，每次请求由 `LoginInterceptor` 回查数据库重新装载。代价是每请求多两条查询，换来"停用账号立刻踢下线、改角色立刻生效"。用户被删除或停用时直接 `invalidate()` 旧 Session，不留半死状态。
+- 账号不存在与密码错误返回**同一个错误码**（`40101`）。分开提示等于送给攻击者一个用户名枚举接口。
+- 登录成功后先 `invalidate()` 旧 Session 再建新的，防会话固定。
+
+**补完 D4 的遗留**：`AuditMetaObjectHandler` 现在会填 `createBy` / `updateBy`，从 `UserContext` 取。取不到（未登录的注册、定时任务）就不填，而不是填 0——0 会被当成一个真实用户 id。
+
+**今天没搬的东西**：`AuthController` 上的 `@OperLog` 注解留到 D8（日志落库）再加；`SysRoleMapper` 里与角色分配相关的 VO 查询留到 D6。这样 D5 单独一块编译得过，也不会把后面几天的判据提前"绿掉"。
+
+**判据**：未登录访问 `/api/**` 返回 401，响应体带 `code:40100`。分两层验：
+- 单元层（`LoginInterceptorTest`）：无 Session 直接 401 且**不穿透到数据库**；停用用户 401 且 Session 作废；有效用户放行且请求结束后 `UserContext` 被清空；非 `/api` 页面路径 302 到 `/login?next=...`。
+- 集成层（`AuthBoundaryTest`）：真的走 `WebMvcConfig` 注册的拦截器，断言 `/api/auth/me`、**不存在的 `/api/does-not-exist`**、`/api/auth/logout` 都是 401；而 `/api/auth/login`、`/api/auth/register`（空 body 应到校验层返回 400）与 `/api/portal/**`（404）确实被放行。
+
+**判据真的能红（两次注入）**：
+1. 把 `WebMvcConfig` 的 `addPathPatterns("/api/**", "/app/**")` 改成只留 `/app/**` → `unknownApiPathIsStillProtected` 红（`expected:<401> but was:<404>`）、`logoutRequiresLogin` 红（`expected:<401> but was:<200>`）。
+2. 注释掉 `LoginInterceptor.reject` 里写响应体的那一行 → 两条单元/集成断言都红（`响应体应带 UNAUTHORIZED 错误码，实际：`）。
+
+**一个值得记的坑**：注入 1 之后 `meRequiresLogin` **仍然是绿的**。原因是它打到 `/api/auth/me`，拦截器没生效时 Controller 里的 `UserContext.require()` 自己也会抛 `UNAUTHORIZED`，照样 401。也就是说只写这一条断言的话，"拦截器根本没注册"这个故障是查不出来的。真正能证明边界的是**不存在的 `/api` 路径**和**不需要登录态就能成功的 `logout`**——判据要挑"没有别的代码替它兜底"的那条。
+
+验证完两次注入均已还原，`mvn -o package` 绿，`Tests run: 27, Failures: 0`（D2–D4 的 18 条 + 今天的 9 条）。
+
+**日期**：D5 实际完成于 11-08，计划表写 11-05。按规则 4 顺延，不压缩后续内容。

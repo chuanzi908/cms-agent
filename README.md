@@ -6,7 +6,7 @@
 
 ## 现在到哪一步了
 
-第 4 天，数据层已就位：8 张表、初始化数据、MyBatis-Plus 插件与审计填充。`mvn -o package` 跑 18 条检查；建表可用 `bash scripts/verify-db.sh` 在临时 MariaDB 实例里验证，不会碰本机已有的库。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
+第 5 天，安全层·身份已就位：Session 只存 userId，每个请求回查数据库装载角色与权限，未登录访问 `/api/**` 一律 401。`mvn -o package` 跑 27 条检查；建表可用 `bash scripts/verify-db.sh` 在临时 MariaDB 实例里验证，不会碰本机已有的库。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
 
 ## 本地启动
 
