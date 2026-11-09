@@ -91,3 +91,30 @@
 验证完两次注入均已还原，`mvn -o package` 绿，`Tests run: 27, Failures: 0`（D2–D4 的 18 条 + 今天的 9 条）。
 
 **日期**：D5 实际完成于 11-08，计划表写 11-05。按规则 4 顺延，不压缩后续内容。
+
+## D6 · 2026-11-09 · 安全层·权限
+
+**做了什么**：`Perm` 权限码常量、`@RequirePermission` 注解、`PermissionAspect`（`@Around("@annotation")`），以及 `RoleService` / `RoleController` 与它们依赖的 `SysPermission` 实体、`SysPermissionMapper` / `SysRolePermissionMapper`、四个 VO、两个 DTO；`SysRoleMapper` 补了三条批量查询（角色权限行、角色人数、角色被引用数）。新增 `PermissionAspectTest` 5 条、`RolePermissionBoundaryTest` 5 条。
+
+**为什么排第六**：D5 只回答"你是谁"，今天才回答"你能干什么"。这两件事必须分开——身份是一个请求内稳定的事实，权限是可能随时被管理员改的策略；把它们塞进同一个过滤器，改权限就得重新登录，演示时很难解释。今天的做法是：身份每请求重查（D5），权限在切面里按**当前**上下文比对，所以改完角色下一个请求就生效。
+
+**三个刻意的设计点**：
+- **401 与 403 不混**。`PermissionAspect` 第一步是 `UserContext.require()`，没有身份直接 401；有身份但不满足权限码才是 403。把未登录当成"没有权限"返回 403，会让前端不知道该跳登录页还是该提示无权限。
+- **ANY / ALL 是注解里的语义，不是切面的默认行为**。`@RequirePermission({ROLE_MANAGE, USER_MANAGE})` 表示"二者之一"，这样"角色列表"既能给角色管理员看，也能给用户管理员看（分配角色时要选）；写成 `Logic.ALL` 时缺一个就拒。语义写在调用点，切面只负责执行。
+- **`@Order(2)` 是有意的**：D8 的日志切面会排在它外面（`@Order(1)`），这样被 403 拦下的请求仍会被记为 `DENIED`。越权尝试不留痕，等于没有日志。
+
+**切面不能只判"接口"，还要判"数据"**：`article:update:own` 与 `article:update:any` 都是权限码，切面只知道"这个人有改稿权限"，不知道"这篇是不是他写的"。数据级判定必须留在 Service（D7），切面越权去猜数据行，就会变成第二个业务层。
+
+**今天没搬的东西**：`RoleController` 四个写接口上的 `@OperLog` 留到 D8——现在加了也没有切面接收，只会让"日志没记上"看起来像 bug。原定判据里的"`sys_log` 有一条 DENIED"同理顺延。
+
+**判据**（拆成两层）：
+- 单元层（`PermissionAspectTest`）：作者缺 `article:audit` → 403 且**业务方法一次都没执行**（`verify(pjp, never()).proceed()`，防"先执行再报错"）；有权限时原样返回；ANY 命中一个即放行；ALL 缺一个即拒；无身份 → 401。
+- 集成层（`RolePermissionBoundaryTest`）：真的走 D5 的 `LoginInterceptor`（Session 里放 userId，`AuthService` mock 出对应身份），断言作者 `GET /api/roles` → 403/40300 且 `RoleService` 零调用；`role:manage` 与 `user:manage` 都能读；未登录 → 401/40100；`/api/roles/permissions` 同样受控。
+
+**判据真的能红（两次注入）**：
+1. 把 `allowed` 改成恒 `true` → 4 条红（单元 2 条 + 集成 2 条），报 `Status expected:<403> but was:<200>`。
+2. 删掉 `RoleController.list()` 上的 `@RequirePermission` → `authorIsForbidden` 红，`roleManagerCanRead` 仍然绿——正好说明"只测有权限的人能进来"是废判据。
+
+**一个值得记的坑**：`@WebMvcTest` 的切片里**没有 AOP 自动配置**。第一次跑集成测试时，`@Import(PermissionAspect.class)` 把切面注册成了普通 Bean，`@Aspect` 不生效、所有请求直接放行——表现为"作者也能读角色列表"。也就是说，如果测试只写"管理员返回 200"这一面，这个故障会被当成通过。凡是"加了注解但没生效"的场景，判据必须是**该被拒绝的那一方**。
+
+**日期**：D6 实际完成于 11-09，计划表写 11-06。按规则 4 顺延。
