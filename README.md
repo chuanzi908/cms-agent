@@ -6,7 +6,7 @@
 
 ## 现在到哪一步了
 
-第 6 天，安全层·权限已就位：身份由 Session 决定（只存 userId，每请求回查），能不能碰某个接口由 `@RequirePermission` + AOP 判定——作者调角色管理接口是 403，未登录是 401，两者不混。`mvn -o package` 跑 37 条检查；建表可用 `bash scripts/verify-db.sh` 在临时 MariaDB 实例里验证，不会碰本机已有的库。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
+第 6 天，安全层·权限已就位：身份由 Session 决定（只存 userId，每请求回查），能不能碰某个接口由 `@RequirePermission` + AOP 判定——作者调角色管理接口是 403，未登录是 401，两者不混。`mvn -o package` 跑 39 条检查；建表可用 `bash scripts/verify-db.sh` 在临时 MariaDB 实例里验证，不会碰本机已有的库。每天的进度写在 [`docs/计划.md`](docs/计划.md)，每天的卡点写在 [`docs/ai-log.md`](docs/ai-log.md)。
 
 ## 本地启动
 

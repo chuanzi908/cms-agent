@@ -117,4 +117,6 @@
 
 **一个值得记的坑**：`@WebMvcTest` 的切片里**没有 AOP 自动配置**。第一次跑集成测试时，`@Import(PermissionAspect.class)` 把切面注册成了普通 Bean，`@Aspect` 不生效、所有请求直接放行——表现为"作者也能读角色列表"。也就是说，如果测试只写"管理员返回 200"这一面，这个故障会被当成通过。凡是"加了注解但没生效"的场景，判据必须是**该被拒绝的那一方**。
 
+**合并别人分支时撞了三个文件**：推送被拒，远程 `main` 上已经有 chuanzi908 的 PR #1（M1-S1：实体与建表脚本对齐），里面同样有 `SysPermission`、`SysPermissionMapper`、`SysRolePermissionMapper`。前两个与今天新增的语义等价，取他的版本（注释更全，且他补了 `SysRolePermission` / `SysUserRole` 两个实体和一条"实体与 `schema.sql` 对不上就红"的测试）。第三个他做成 `BaseMapper<SysRolePermission>`，而 D6 需要按复合主键的三个便捷方法——合并成"`BaseMapper` + 三个方法"，并把 `insert` 改名为 `insertIgnore`：`BaseMapper` 已经注入了一个叫 `insert` 的语句，同名声明会撞 statement id；而且这里要的是 `insert ignore` 的幂等插入，与"重复键抛异常"是两种不同的失败语义。合并后 `Tests run: 39`（两人的用例都在），`BUILD SUCCESS`。
+
 **日期**：D6 实际完成于 11-09，计划表写 11-06。按规则 4 顺延。

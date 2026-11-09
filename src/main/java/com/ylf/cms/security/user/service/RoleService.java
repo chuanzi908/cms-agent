@@ -166,7 +166,7 @@ public class RoleService {
             if (permissionMapper.selectById(permId) == null) {
                 throw new BizException(ResultCode.BAD_REQUEST, "权限点不存在：" + permId);
             }
-            rolePermissionMapper.insert(roleId, permId);
+            rolePermissionMapper.insertIgnore(roleId, permId);
         }
     }
 
