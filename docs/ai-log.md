@@ -50,3 +50,9 @@
 **为什么**：M2 的文章必须挂在分类下，且"停用分类不能发文章"是验收点；M3 没交付，用伪 M3 提供分类能力，M2 通过 Service 接口调用（不跨模块 import mapper）。
 **卡点**：递归展开子分类时死循环（父子 id 相同的数据），在递归入口加 visited 集合去重后正常。
 
+## D9 · 2026-11-09 · 文章数据层：实体、Mapper 与联查 SQL
+
+**做了什么**：实现 content 模块的 `CmsArticle` 实体（含 @Version 乐观锁、@TableLogic 逻辑删除）、`ArticleStatusEnum`（草稿/待审核/已发布/已下架）、`CmsArticleMapper` 与 XML（联查分类名、作者名的 selectArticleVO）。
+**为什么**：文章列表要展示分类名和作者名，单表查询不够；联查 SQL 放 XML 便于维护，也是后面消除 N+1 的基础。
+**卡点**：XML 放在 `src/main/java` 下时打包不进 target/classes，运行期报 "Invalid bound statement"；把 mapper XML 移到 `src/main/resources/mapper` 后正常。
+

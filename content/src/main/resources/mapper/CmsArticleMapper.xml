@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ylf.cms.content.mapper.CmsArticleMapper">
+
+    <!-- 单条详情联查（带作者昵称、分类名称） -->
+    <select id="selectVOById" resultType="com.ylf.cms.content.vo.ArticleVO">
+        SELECT a.id,
+               a.title,
+               a.content,
+               a.author_id   AS authorId,
+               a.category_id AS categoryId,
+               a.status,
+               a.version,
+               a.create_time AS createTime,
+               a.update_time AS updateTime,
+               u.nickname    AS authorName,
+               c.name        AS categoryName
+        FROM cms_article a
+                 LEFT JOIN sys_user u ON a.author_id = u.id
+                 LEFT JOIN cms_category c ON a.category_id = c.id
+        WHERE a.id = #{id}
+          AND a.deleted = 0
+    </select>
+
+    <!-- 分页数据查询：一次联查带出作者昵称、分类名称，避免循环查询产生N+1 -->
+    <select id="selectPageVO" resultType="com.ylf.cms.content.vo.ArticleVO">
+        SELECT a.id,
+               a.title,
+               a.content,
+               a.author_id   AS authorId,
+               a.category_id AS categoryId,
+               a.status,
+               a.version,
+               a.create_time AS createTime,
+               a.update_time AS updateTime,
+               u.nickname    AS authorName,
+               c.name        AS categoryName
+        FROM cms_article a
+                 LEFT JOIN sys_user u ON a.author_id = u.id
+                 LEFT JOIN cms_category c ON a.category_id = c.id
+        WHERE a.deleted = 0
+        <if test="query.title != null and query.title != ''">
+            AND a.title LIKE CONCAT('%', #{query.title}, '%')
+        </if>
+        <if test="query.status != null">
+            AND a.status = #{query.status}
+        </if>
+        <if test="query.categoryIds != null and query.categoryIds.size() > 0">
+            AND a.category_id IN
+            <foreach collection="query.categoryIds" item="cid" open="(" separator="," close=")">
+                #{cid}
+            </foreach>
+        </if>
+        <if test="query.authorId != null">
+            AND a.author_id = #{query.authorId}
+        </if>
+        ORDER BY a.create_time DESC
+    </select>
+
+    <!-- 分页总数统计 -->
+    <select id="selectPageVO_mpCount" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM cms_article a
+        WHERE a.deleted = 0
+        <if test="query.title != null and query.title != ''">
+            AND a.title LIKE CONCAT('%', #{query.title}, '%')
+        </if>
+        <if test="query.status != null">
+            AND a.status = #{query.status}
+        </if>
+        <if test="query.categoryIds != null and query.categoryIds.size() > 0">
+            AND a.category_id IN
+            <foreach collection="query.categoryIds" item="cid" open="(" separator="," close=")">
+                #{cid}
+            </foreach>
+        </if>
+        <if test="query.authorId != null">
+            AND a.author_id = #{query.authorId}
+        </if>
+    </select>
+
+</mapper>
