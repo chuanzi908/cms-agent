@@ -56,3 +56,9 @@
 **为什么**：文章列表要展示分类名和作者名，单表查询不够；联查 SQL 放 XML 便于维护，也是后面消除 N+1 的基础。
 **卡点**：XML 放在 `src/main/java` 下时打包不进 target/classes，运行期报 "Invalid bound statement"；把 mapper XML 移到 `src/main/resources/mapper` 后正常。
 
+## D10 · 2026-11-10 · 接口层：DTO 与 Controller
+
+**做了什么**：实现 `ArticleSaveDTO`/`ArticleUpdateDTO`/`ArticleQueryDTO`（带参数校验注解）、`ArticleVO`、`ArticleController`（增删改查、提交审核、审核通过/驳回、下架、分页列表、工作台统计接口骨架）、`ArticleService` 接口。
+**为什么**：请求参数和响应结构固定下来，前端与验收脚本按 DTO/VO 对接；Controller 只做参数接收和权限注解。
+**卡点**：DTO 校验注解用了 `@NotBlank` 但没加 spring-boot-starter-validation 依赖，校验不生效；补依赖后 400 参数错误能正确返回。
+
