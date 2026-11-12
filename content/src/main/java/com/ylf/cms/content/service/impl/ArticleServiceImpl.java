@@ -1,6 +1,5 @@
 package com.ylf.cms.content.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ylf.cms.catalog.service.CategoryService;
@@ -23,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * 文章服务实现（M2）
@@ -104,17 +102,18 @@ public class ArticleServiceImpl implements ArticleService, ArticleAuthorCounter 
 
     @Override
     public Page<ArticleVO> page(ArticleQueryDTO query) {
-        // D11 基础分页：MP 自带分页 + 手动转VO（作者昵称/分类名为空，D12 改为联查）
-        Wrapper<CmsArticle> wrapper = Wrappers.<CmsArticle>lambdaQuery()
-                .like(query.getTitle() != null && !query.getTitle().isEmpty(), CmsArticle::getTitle, query.getTitle())
-                .eq(query.getStatus() != null, CmsArticle::getStatus, query.getStatus())
-                .eq(query.getAuthorId() != null, CmsArticle::getAuthorId, query.getAuthorId())
-                .eq(query.getCategoryId() != null, CmsArticle::getCategoryId, query.getCategoryId())
-                .orderByDesc(CmsArticle::getCreateTime);
-        Page<CmsArticle> raw = articleMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
-        Page<ArticleVO> result = new Page<>(raw.getCurrent(), raw.getSize(), raw.getTotal());
-        result.setRecords(raw.getRecords().stream().map(this::toVO).collect(Collectors.toList()));
-        return result;
+        // 分类筛选：调用M3展开子分类ID（含自身）
+        if (query.getCategoryId() != null) {
+            List<Long> ids = categoryService.descendantIds(query.getCategoryId());
+            query.setCategoryIds(ids);
+        }
+        Page<ArticleVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        // 验收用例4：分页仅两条SQL（selectPageVO_mpCount 统计 + selectPageVO 数据），无N+1
+        Long total = articleMapper.selectPageVO_mpCount(query);
+        List<ArticleVO> records = articleMapper.selectPageVO(page, query);
+        page.setTotal(total == null ? 0 : total);
+        page.setRecords(records);
+        return page;
     }
 
     @Override
@@ -206,19 +205,5 @@ public class ArticleServiceImpl implements ArticleService, ArticleAuthorCounter 
         return articleMapper.selectCount(Wrappers.<CmsArticle>lambdaQuery()
                 .eq(CmsArticle::getDeleted, 0)
                 .eq(status != null, CmsArticle::getStatus, status));
-    }
-
-    private ArticleVO toVO(CmsArticle a) {
-        ArticleVO v = new ArticleVO();
-        v.setId(a.getId());
-        v.setTitle(a.getTitle());
-        v.setContent(a.getContent());
-        v.setAuthorId(a.getAuthorId());
-        v.setCategoryId(a.getCategoryId());
-        v.setStatus(a.getStatus());
-        v.setVersion(a.getVersion());
-        v.setCreateTime(a.getCreateTime());
-        v.setUpdateTime(a.getUpdateTime());
-        return v;
     }
 }
