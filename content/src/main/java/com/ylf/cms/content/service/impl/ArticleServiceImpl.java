@@ -16,6 +16,7 @@ import com.ylf.cms.content.mapper.CmsArticleMapper;
 import com.ylf.cms.content.service.ArticleService;
 import com.ylf.cms.content.vo.ArticleVO;
 import com.ylf.cms.content.vo.DashboardVO;
+import com.ylf.cms.security.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +28,7 @@ import java.util.Objects;
  * 文章服务实现（M2）
  *
  * 跨模块边界（ModuleBoundaryTest强制）：
- *   - 只调用 M3 CategoryService 的 Service 接口
+ *   - 只调用 M1 UserService、M3 CategoryService 的 Service 接口
  *   - 禁止 import 其他模块的 mapper/entity/controller/config
  */
 @Service
@@ -36,6 +37,7 @@ public class ArticleServiceImpl implements ArticleService, ArticleAuthorCounter 
 
     private final CmsArticleMapper articleMapper;
     private final CategoryService categoryService;
+    private final UserService userService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -181,6 +183,9 @@ public class ArticleServiceImpl implements ArticleService, ArticleAuthorCounter 
         vo.setPendingCount(countByStatus(ArticleStatusEnum.PENDING.getCode()));
         vo.setPublishedCount(countByStatus(ArticleStatusEnum.PUBLISHED.getCode()));
         vo.setOfflineCount(countByStatus(ArticleStatusEnum.OFFLINE.getCode()));
+        // 跨模块：M1 用户总数、M3 分类总数
+        vo.setUserCount(userService.countAll());
+        vo.setCategoryCount((long) categoryService.listFlat().size());
         return vo;
     }
 
