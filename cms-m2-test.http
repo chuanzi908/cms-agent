@@ -1,0 +1,111 @@
+### ============================================================
+### CMS M2 内容模块 验收测试脚本（IDEA HTTP Client）
+### 用法（按顺序执行，每段左上角绿色 ▶ 逐个点击）：
+###   1. 先确认 MySQL 服务运行中，且已执行过 sql/schema.sql
+###   2. 启动 CmsApplication（startup 模块）
+###   3. 从头到尾依次运行下列请求，第1、2段会自动保存 token，
+###      第3段会自动保存新建文章 id，后续请求无需手动改参数
+### ============================================================
+
+### 1. 登录 admin（自动保存 token）
+POST http://127.0.0.1:8080/api/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+> {% client.global.set("token", response.body.data.token); %}
+
+### 2. 登录 zhangsan（自动保存 token2，验收3用）
+POST http://127.0.0.1:8080/api/login
+Content-Type: application/json
+
+{
+  "username": "zhangsan",
+  "password": "123456"
+}
+
+> {% client.global.set("token2", response.body.data.token); %}
+
+### 3. 新建文章（草稿，自动保存文章 id 到 aid）
+POST http://127.0.0.1:8080/api/article
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "验收测试文章",
+  "content": "验收正文内容",
+  "categoryId": 1
+}
+
+> {% client.global.set("aid", response.body.data.id); %}
+
+### 4. 【验收1】草稿直接审核通过 → 期待 code=40901
+POST http://127.0.0.1:8080/api/article/{{aid}}/passAudit
+Authorization: Bearer {{token}}
+
+### 5. 提交审核（草稿→待审核）→ 期待 code=0
+POST http://127.0.0.1:8080/api/article/{{aid}}/submitAudit
+Authorization: Bearer {{token}}
+
+### 6. 【验收2 前半】正常修改（version=1）→ 期待 code=0，version 变为 2
+PUT http://127.0.0.1:8080/api/article
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": {{aid}},
+  "version": 1,
+  "title": "第一次修改",
+  "content": "内容A",
+  "categoryId": 1
+}
+
+### 7. 【验收2 后半】复用旧 version=1 抢占修改 → 期待 code=40900
+PUT http://127.0.0.1:8080/api/article
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": {{aid}},
+  "version": 1,
+  "title": "并发抢占修改",
+  "content": "内容B",
+  "categoryId": 1
+}
+
+### 8. 审核通过（待审核→已发布）→ 期待 code=0
+POST http://127.0.0.1:8080/api/article/{{aid}}/passAudit
+Authorization: Bearer {{token}}
+
+### 9. 下架（已发布→已下架）→ 期待 code=0
+POST http://127.0.0.1:8080/api/article/{{aid}}/offline
+Authorization: Bearer {{token}}
+
+### 10. 【验收4】分页列表 → 切到应用控制台，只应出现 2 条 SQL（COUNT 统计 + 联查 LIMIT），无 N+1
+GET http://127.0.0.1:8080/api/article/page?pageNum=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### 11. 工作台统计（M1账号数 + M3分类数 + M2稿件数）
+GET http://127.0.0.1:8080/api/content/dashboard
+Authorization: Bearer {{token}}
+
+### 12. 【验收3 前半】zhangsan 新建一篇稿件（自动提取 zid）
+POST http://127.0.0.1:8080/api/article
+Authorization: Bearer {{token2}}
+Content-Type: application/json
+
+{
+  "title": "张三的稿件",
+  "content": "张三内容",
+  "categoryId": 1
+}
+
+> {% client.global.set("zid", response.body.data.id); %}
+
+### 13. 【验收3 后半】admin 删除账号2（zhangsan）→ 期待 code=40903
+### 注意：账号被删一次后需执行 sql/schema.sql 重置才能再次复现本用例
+DELETE http://127.0.0.1:8080/api/users/2
+Authorization: Bearer {{token}}
