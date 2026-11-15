@@ -1,0 +1,164 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "CMS API",
+    "description": "CMS 四人分工项目接口文档（脚本同步校验代码与文档一致性）",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://127.0.0.1:8080" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "ArticleSaveDTO": {
+        "type": "object",
+        "required": ["title", "content", "categoryId"],
+        "properties": {
+          "title": { "type": "string", "description": "文章标题" },
+          "content": { "type": "string", "description": "文章正文" },
+          "categoryId": { "type": "integer", "format": "int64", "description": "分类ID" }
+        }
+      },
+      "ArticleUpdateDTO": {
+        "type": "object",
+        "required": ["id", "version", "title", "content", "categoryId"],
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "version": { "type": "integer", "description": "乐观锁版本号" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "categoryId": { "type": "integer", "format": "int64" }
+        }
+      },
+      "Result": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "description": "0成功，非0失败" },
+          "message": { "type": "string" },
+          "data": { "type": "object" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/login": {
+      "post": {
+        "summary": "登录（M1契约版）",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "username": { "type": "string" }, "password": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "返回token" } }
+      }
+    },
+    "/api/users/{id}": {
+      "delete": {
+        "summary": "删除账号（M1，账号下有稿件返回40903）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "成功" },
+          "40903": { "description": "该账号下存在稿件，无法删除" }
+        }
+      }
+    },
+    "/api/article": {
+      "post": {
+        "summary": "新增文章（默认草稿）",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArticleSaveDTO" } } } },
+        "responses": {
+          "200": { "description": "创建成功" },
+          "40902": { "description": "分类不存在或已停用" }
+        }
+      },
+      "put": {
+        "summary": "修改文章（乐观锁，冲突40900）",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArticleUpdateDTO" } } } },
+        "responses": {
+          "200": { "description": "修改成功" },
+          "40900": { "description": "版本冲突" },
+          "40901": { "description": "状态不允许编辑" }
+        }
+      }
+    },
+    "/api/article/page": {
+      "get": {
+        "summary": "分页列表（无N+1）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "title", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "integer" } },
+          { "name": "categoryId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "authorId", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "分页结果" } }
+      }
+    },
+    "/api/article/{id}": {
+      "get": {
+        "summary": "文章详情",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "详情" } }
+      },
+      "delete": {
+        "summary": "逻辑删除文章",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "删除成功" } }
+      }
+    },
+    "/api/article/{id}/submitAudit": {
+      "post": {
+        "summary": "提交审核（草稿→待审核）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/api/article/{id}/passAudit": {
+      "post": {
+        "summary": "审核通过（待审核→已发布，草稿直接审核返回40901）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "成功" },
+          "40901": { "description": "状态不允许" }
+        }
+      }
+    },
+    "/api/article/{id}/rejectAudit": {
+      "post": {
+        "summary": "审核驳回（待审核→草稿）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/api/article/{id}/offline": {
+      "post": {
+        "summary": "下架（已发布→已下架）",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/api/content/dashboard": {
+      "get": {
+        "summary": "内容工作台统计（M1账号数+M3分类数+M2稿件数）",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "统计结果" } }
+      }
+    }
+  }
+}
